@@ -20,6 +20,7 @@ fn main() {
     println!("\n{}", &args[0]);
 }
 
+//Esto ejecuta un sencillo análisis que devuelve un boolean y según el resultado busca si el archivo es binario o no
 fn execute_analysis(filename: &String ) {
     let bool = check_asciiSTL((&mut &filename).to_string());
     if !bool {
@@ -37,6 +38,7 @@ fn read_text(filename: &String) {
     
 }
 
+//Simple chequeo para ver si el archivo es ASCII o _booleano
 fn check_asciiSTL(content: String) -> bool {
     let mut counter: u32 = 0;
     if content.starts_with("solid") {
@@ -53,17 +55,25 @@ fn check_asciiSTL(content: String) -> bool {
     false
 }
 
+//Al leer el booleano y ver que no es un ascii se activa esto 
 fn read_binarySTL(file:&mut File) {
     println!("Es un archivo binario");
+
+    //Manda una comprobación del archivo (ya no manda como originalmente una referencia de &String)
     let header = check_binarySTL(file);
+    //En caso de que salga un error, le damos un mensaje predefinido y con el 
+    //expect podemos coger el Result sin el Error, pudiendo interaccionar mucho más facilmente
     let polygon = create_triangle_list(file, header).expect("Error creando polígono");
-    println!("{}", polygon.header.num_triangles);
+    println!("El número de polígonos es de {} triángulos y {} quads", polygon.header.num_triangles, polygon.header.num_triangles/2);
     //Comprobado que funciona, madre mía
     //println!("{:?}", polygon);    
 }
 
+//Devuelve un polígono usando el header antes creado y el ahora creado vector de triángulos
 fn create_triangle_list<T: ReadBytesExt> (input: &mut T, header: Header) -> Result<Polygon, Error> {
     let mut triangles = Vec::new();
+
+    //Recorre todos los triángulos individualmente primero, leyendo los vértices de cada triángulo y luego los triángulos creados con estos
     for _ in 0..header.num_triangles {
         triangles.push(read_triangle(input)?);
     }
@@ -75,16 +85,22 @@ fn check_binarySTL(file: &mut File) -> Header {
     //leemos desde el byte 80, 4 bytes;
     //se puede usar además de [4;80] -> [08u; 80];
     let mut buffer = [4; 80];
+
     //ABRIMOS EL ARCHIVO
     //LO LEEMOS USANDO PARA REFERENCIA DE QUÉ BYTES COGER
     file.read(&mut buffer);    
+
     //Ahora Buffer se ha transformado en los datos que hemos cortado del archivo    
     //leemos y el file se convierte en la parte seccionada
     //convertimos la lectura de ese archivo a U32 con un crate externo usando LittleEndian
     let num_triangulos = file.read_u32::<LittleEndian>().expect("Error");
+
+    //Mini comprobación de tipo de archivo por curiosidad
     println!("{:?}", file);
     //LO LEE
-    println!("Hay: {} triángulos en esta figura, que serían {} quads", num_triangulos, (&num_triangulos/2));
+
+    //Ya no es necesario que sea tan redundante y así no confunde a nadie
+    /*println!("Hay: {} triángulos en esta figura, que serían {} quads", num_triangulos, (&num_triangulos/2));*/
 
     //Devolvemos el header y el número de triángulos dentro de un struct
     Header{header: buffer, num_triangles: num_triangulos}
@@ -113,6 +129,7 @@ fn read_triangle <T: ReadBytesExt> (input: &mut T) -> Result <Triangle, Error> {
     Ok(Triangle { normal, v1, v2, v3, attribute})
 }
 
+//Creamos una estructura que luego guardaremos en un vector de triángulos
 #[derive(Debug)]
 struct Triangle {
     normal: [f32; 3],
@@ -122,12 +139,15 @@ struct Triangle {
     attribute: u16,
 }
 
+
+//Creamos un header con los datos del header y el número de triángulos
 #[derive(Debug)]
 struct Header {
     header: [u8; 80],
     num_triangles: u32,
 }
 
+//Creamos un struct con otros structs sirviendo de base
 #[derive(Debug)]
 struct Polygon {
     header: Header,
